@@ -1,0 +1,93 @@
+name: Snyk Auto Scan
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+    branches: [main, master]
+  workflow_dispatch:
+
+jobs:
+  detect-and-scan:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      # Set up Node.js if needed
+      - name: Set up Node.js
+        if: |
+          hashFiles('**/package.json', '**/yarn.lock', '**/pnpm-lock.yaml') != ''
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      # Set up Python if needed
+      - name: Set up Python
+        if: |
+          hashFiles('**/requirements.txt', '**/pyproject.toml', '**/Pipfile', '**/setup.py') != ''
+        uses: actions/setup-python@v5
+        with:
+          python-version: 3.x
+
+      # Set up .NET if needed
+      - name: Set up .NET
+        if: |
+          hashFiles('**/*.sln', '**/*.csproj') != ''
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 8.0.x
+
+      # Install Node.js dependencies recursively
+      - name: Install Node.js dependencies
+        if: |
+          hashFiles('**/package.json') != ''
+        run: |
+          find . -name package.json -not -path "*/node_modules/*" -execdir npm install \;
+
+      # Install Python dependencies recursively
+      - name: Install Python dependencies
+        if: |
+          hashFiles('**/requirements.txt') != ''
+        run: |
+          find . -name requirements.txt -execdir pip install -r requirements.txt \;
+
+      # Restore all .NET solutions and standalone projects recursively
+      - name: Restore all .sln and .csproj files
+        if: |
+          hashFiles('**/*.sln', '**/*.csproj') != ''
+        run: |
+          set -e
+          shopt -s globstar nullglob
+          for sln in **/*.sln; do
+            echo "Restoring solution $sln"
+            dotnet restore "$sln"
+          done
+          for csproj in **/*.csproj; do
+            # Only restore csproj if it doesn't belong to any solution
+            if ! grep -q "$(basename "$csproj")" **/*.sln 2>/dev/null; then
+              echo "Restoring standalone project $csproj"
+              dotnet restore "$csproj"
+            fi
+          done
+
+      - name: Install Snyk
+        run: npm install -g snyk
+
+      - name: Snyk Auth
+        env:
+          SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+        run: snyk auth $SNYK_TOKEN
+
+      - name: Run Snyk test (all projects, all languages)
+        env:
+          SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+        run: |
+          mkdir -p snyk-results
+          snyk test --all-projects --json > snyk-results/snyk-all.json || true
+
+      - name: Upload Snyk scan results as artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: snyk-results
+          path: snyk-results/
