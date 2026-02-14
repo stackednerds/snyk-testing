@@ -29,7 +29,7 @@
   "description": "backend logic of the project using Mongo DB, Node js",
   "devDependencies": {
     "jest": "29.5.0",
-    "supertest": "6.3.3"
+    "supertest": "6.3.4"
   },
   "homepage": "https://github.com//backend#readme",
   "jest": {
