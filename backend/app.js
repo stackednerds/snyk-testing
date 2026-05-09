@@ -1,4 +1,3 @@
-
 var createError = require('http-errors');
 var express = require('express');
 const session = require('express-session');
@@ -41,7 +40,10 @@ app.use(express.static(path.join(__dirname, 'public')));
 app.use(logger('dev'));
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
-app.use(session({secret:'express-session secret'}))
+app.use(session({
+    secret: 'express-session secret',
+    cookie: { secure: process.env.NODE_ENV === 'production' }
+}));
 
 //passport
 app.use(passport.initialize());
@@ -73,4 +75,3 @@ app.use((err, req, res, next)=>{
 
 
 module.exports = app;
-
