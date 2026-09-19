@@ -15,7 +15,7 @@
     "express-fileupload": "^1.1.5",
     "express-session": "^1.17.3",
     "express-validator": "^5.3.1",
-    "helmet": "6.1.5",
+    "helmet": "6.2.0",
     "http-errors": "2.0.0",
     "mongoose": "5.6.0",
     "morgan": "1.10.0",
